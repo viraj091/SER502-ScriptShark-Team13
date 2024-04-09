@@ -1,0 +1,31 @@
+﻿Boan:
+* Milestone 1
+   * Language Design
+* Milestone 2 (to be completed)
+   * Grammar (BNF to DCG)
+
+
+Angela:
+* Milestone 1
+   * Language Grammar
+   * TA meeting
+* Milestone 2 (to be completed)
+   * Interpreter
+
+
+Avanthika: 
+* Milestone 1
+   * Language Name
+   * GitHub
+   * TA meeting
+* Milestone 2 (to be completed)
+   * Lexical Analyzer
+
+
+Viraj:
+* Milestone 1
+   * Language Grammar
+   * GitHub
+   * TA meeting
+* Milestone 2 (to be completed)
+   * Parser
