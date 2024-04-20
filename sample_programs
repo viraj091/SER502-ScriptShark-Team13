@@ -1,0 +1,81 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SAMPLE PROGRAM 1
+
+% features used: for loop, addition/multiplication, print number, not operator
+% [begin, z, :=, 1, ;, for, i, :=, 0, ;, not, i, =, 3, ;, i, :=, i, +, 1, do, z, :=, z, *, 2, endfor, ;, print, '(', z, ')', end, .]
+
+begin
+	z := 1;
+
+	for i := 0; not i = 3; i := i + 1 do
+		z := z * 2
+	endfor;
+
+	print(z)
+
+end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SAMPLE PROGRAM 2
+
+% features used: while loop, subtraction/division
+% [begin, i, :=, 2, ;, z, :=, 9, ;, while, not, i, =, 0, do, z, :=, z, /, 3, ;, i, :=, i, -, 1, endwhile, ;, print, '(', z, ')', end, .]
+
+begin
+	i := 2;
+	z := 9;
+
+	while not i = 0 do
+		z := z / 3;
+		i := i - 1;
+	endwhile;
+
+	print(z)
+
+end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SAMPLE PROGRAM 3
+
+% features used: for i in range, string var, print string
+% [begin, z, :=, "hello", ;, for, i, in, range, '(', 1, ',', 5, ')', do, print, '(', z, ')', endfor, end, .]
+
+begin
+	z := "hello";
+
+	for i in range(1,5) do
+		print(z)
+	endfor
+end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SAMPLE PROGRAM 4
+
+% features used: ternary operator, and operator
+% [begin, x, :=, 1, ;, z, :=, x, ;, x, =, 1, and, z, =, 1, ?, print, '(', "hello", ')', :, print, '(', "goodbye", ')', endtern, end, .]
+
+begin
+	x := 1;
+	z := x;
+
+	x = 1 and z = 1 ? print("hello") : print("goodbye") endtern
+end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SAMPLE PROGRAM 5
+
+% features used: or operator
+% [begin, x, :=, 0, ;, y, :=, 1, ;, if, x, =, 1, or, y, =, 1, then, z, :=, 1, else, z, :=, 0, endif, end, .]
+
+begin
+	x := 0;
+	y := 1;
+
+	if x = 1 or y = 1 then z := 1 else z := 0 endif
+end.
+
+
+
+
+
+
