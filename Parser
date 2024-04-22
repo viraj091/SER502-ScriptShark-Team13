@@ -1,0 +1,114 @@
+% Lexical Analyzer
+lexer(Input, TokenList) :-
+    split_string(Input, " \n\t", " \n\t", Tokens),
+    remove_empty_strings(Tokens, TokenList).
+
+remove_empty_strings([], []).
+remove_empty_strings([H|T], [H|T1]) :-
+    \+ H = "",
+    remove_empty_strings(T, T1).
+remove_empty_strings([_|T], T1) :-
+    remove_empty_strings(T, T1).
+
+% Parser
+parse(Input) :-
+    catch(
+        (
+            lexer(Input, Tokens),
+            program(Tokens, []),
+            writeln('Parsing successful.')
+        ),
+        Error,
+        (
+            writeln('Error during parsing:'),
+            writeln(Error)
+        )
+    ).
+
+% Program
+program --> statement, program.
+program --> statement.
+
+% Statement
+statement --> assignment.
+statement --> conditional.
+statement --> loop.
+statement --> print.
+
+% Assignment
+assignment --> identifier, ['='], expression.
+
+% Conditional
+conditional --> ['if'], expression, ['then'], statement, ['else'], statement.
+conditional --> expression, ['?'], expression, [':'], expression.
+
+% Loop
+loop --> for_loop.
+loop --> while_loop.
+
+% For Loop
+for_loop --> ['for'], identifier, ['in'], ['range'], ['('], expression, [','], expression, [')'], statement.
+
+% While Loop
+while_loop --> ['while'], ['('], expression, [')'], statement.
+
+% Print
+print --> ['print'], ['('], expression, [')'].
+
+% Expression
+expression --> term.
+expression --> term, operator, expression.
+
+% Term
+term --> identifier.
+term --> value.
+
+% Value
+value(boolean) --> boolean.
+value(number) --> number.
+value(string) --> string.
+
+% Boolean
+boolean(true) --> ['true'].
+boolean(false) --> ['false'].
+
+% Number
+number --> integer.
+
+% String
+string --> ['"'], chars, ['"'].
+
+% Identifier
+identifier --> letter, idchars.
+letter --> [Char], { code_type(Char, alpha) }.
+idchars --> [].
+idchars --> [Char], { code_type(Char, alnum) }, idchars.
+
+% Operator
+operator --> ['+'].
+operator --> ['-'].
+operator --> ['*'].
+operator --> ['/'].
+operator --> ['and'].
+operator --> ['or'].
+operator --> ['not'].
+
+% Chars
+chars --> [].
+chars --> char, chars.
+
+% Char
+char --> letter.
+char --> digit.
+
+% Digit
+digit --> [Char], { code_type(Char, digit) }.
+
+% Command-line Invocation
+:- initialization(main).
+main :-
+    current_prolog_flag(argv, Argv),
+    nth0(0, Argv, InputFile),
+    read_file_to_string(InputFile, Input, []),
+    parse(Input),
+    halt.
