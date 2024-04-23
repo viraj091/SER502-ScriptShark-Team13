@@ -1,23 +1,30 @@
+:- table boolean_expr/3.
+:- table arithmetic_expr/3.
+:- table term/3.
+
 program(prog(X)) --> block(X), [.].
 block(block(X)) --> [begin], command(X), [end].
 
 command(assgn_num(X,Y)) --> identifier(X), [:=], arithmetic_expr(Y).
 command(assgn_bool(X,Y)) --> identifier(X), [:=], boolean_expr(Y).
+command(assgn_str(X,Y)) --> identifier(X), [:=], string(Y).
 
 command(if(X,Y,Z)) --> [if], boolean_expr(X), [then], command(Y), [else], command(Z), [endif].
 command(tern(X,Y,Z)) --> boolean_expr(X), [?], command(Y), [:], command(Z), [endtern].
 
 command(while(X,Y)) --> [while], boolean_expr(X), [do], command(Y), [endwhile].
 command(for(W,X,Y,Z)) --> [for], command(W), [;], boolean_expr(X), [;], command(Y), [do], command(Z), [endfor].
-command(for_range(W,X,Y,Z)) --> [for], identifier(W), [in], [range], arithmetic_expr(X), [','], arithmetic_expr(Y), [do], command(Z), [endfor].
+command(for_range(W,X,Y,Z)) --> [for], identifier(W), [in], [range], ['('], arithmetic_expr(X), [','], arithmetic_expr(Y), [')'], [do], command(Z), [endfor].
 
 command(print(X)) --> [print], ['('], identifier(X), [')'].
 command(print(X)) --> [print], ['('], number(X), [')'].
+command(print(X)) --> [print], ['('], string(X), [')'].
 
 % recursive commands
 
 command(assgn_num(X,Y,Z)) --> identifier(X), [:=], arithmetic_expr(Y), [;], command(Z).
 command(assgn_bool(X,Y,Z)) --> identifier(X), [:=], boolean_expr(Y), [;], command(Z).
+command(assgn_str(X,Y,Z)) --> identifier(X), [:=], string(Y), [;], command(Z).
 
 command(if(W,X,Y,Z)) --> [if], boolean_expr(W), [then], command(X), [else], command(Y), [endif], [;], command(Z).
 command(tern(W,X,Y,Z)) --> boolean_expr(W), [?], command(X), [:], command(Y), [endtern], [;], command(Z).
@@ -26,7 +33,9 @@ command(while(X,Y,Z)) --> [while], boolean_expr(X), [do], command(Y), [endwhile]
 command(for(V,W,X,Y,Z)) --> [for], command(V), [;], boolean_expr(W), [;], command(X), [do], command(Y), [endfor], [;], command(Z).
 command(for_range(V,W,X,Y,Z)) --> [for], identifier(V), [in], [range], arithmetic_expr(W), [','], arithmetic_expr(X), [do], command(Y), [endfor], [;], command(Z).
 
-% Q: recursive print?
+command(print(X,Y)) --> [print], ['('], identifier(X), [')'], [;], command(Y).
+command(print(X,Y)) --> [print], ['('], number(X), [')'], [;], command(Y).
+command(print(X,Y)) --> [print], ['('], string(X), [')'], [;], command(Y).
 
 % boolean expressions
 
@@ -35,8 +44,8 @@ boolean_expr(bool_expr(false)) --> [false].
 
 % boolean_expr(bool_expr(X)) --> identifier(X).
 
-% boolean_expr(and_expr(X,Y)) --> boolean_expr(X), [andalso], boolean_expr(Y).
-% boolean_expr(or_expr(X,Y)) --> boolean_expr(X), [orelse], boolean_expr(Y).
+boolean_expr(and_expr(X,Y)) --> boolean_expr(X), [and], boolean_expr(Y).
+boolean_expr(or_expr(X,Y)) --> boolean_expr(X), [or], boolean_expr(Y).
 boolean_expr(not(X)) --> [not], boolean_expr(X).
 
 boolean_expr(eq(X,Y)) --> arithmetic_expr(X), [=], arithmetic_expr(Y).
@@ -44,16 +53,16 @@ boolean_expr(eq(X,Y)) --> arithmetic_expr(X), [=], arithmetic_expr(Y).
 % arithmetic expressions
 
 arithmetic_expr(term(X)) --> term(X).
-arithmetic_expr(add_expr(X,Y)) --> term(X), [+], arithmetic_expr(Y).
-arithmetic_expr(sub_expr(X,Y)) --> term(X), [-], arithmetic_expr(Y).
+arithmetic_expr(add_expr(X,Y)) --> arithmetic_expr(X), [+], term(Y).
+arithmetic_expr(sub_expr(X,Y)) --> arithmetic_expr(X), [-], term(Y).
 
 term(factor_term(X)) --> factor(X).
-term(mult_term(X,Y)) --> factor(X), [*], term(Y).
-term(div_term(X,Y)) --> factor(X), [/], term(Y).
+term(div_term(X,Y)) --> term(X), [/], factor(Y).
+term(mult_term(X,Y)) --> term(X), [*], factor(Y).
 
 factor(factor(X)) --> identifier(X); number(X); ['('], arithmetic_expr(X), [')'].
 
-% identifiers, numbers
+% identifiers, strings, numbers
 
 identifier(id(i)) --> [i].
 identifier(id(x)) --> [x].
@@ -62,16 +71,8 @@ identifier(id(z)) --> [z].
 identifier(id(u)) --> [u].
 identifier(id(v)) -->[v].
 
-number(num(0)) --> [0]. 
-number(num(1)) --> [1].
-number(num(2)) --> [2].
-number(num(3)) --> [3].
-number(num(4)) --> [4].
-number(num(5)) --> [5].
-number(num(6)) --> [6]. 
-number(num(7)) --> [7].
-number(num(8)) --> [8].
-number(num(9)) --> [9].
+string(str(X)) --> ['"'], [X], ['"'].
+number(num(X)) --> [X], {number(X)}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -86,7 +87,7 @@ program_eval(P, Z) :-
 
 program_eval_h(prog(X), Env, NewEnv, Ret) :- 
     program_eval_h(X, Env, NewEnv, _),
-    member((_,z,Ret), NewEnv).
+    lookup(z, NewEnv, Ret).
 
 program_eval_h(block(X), Env, NewEnv, Ret) :-
     program_eval_h(X, Env, NewEnv, _).
@@ -96,13 +97,30 @@ program_eval_h(block(X), Env, NewEnv, Ret) :-
 program_eval_h(assgn_num(X,Y), Env, NewEnv, Ret) :- 
     program_eval_h(X, Env, _, Id),
     program_eval_h(Y, Env, _, Val),
-    update(num, Id, Val, Env, NewEnv),
+
+    (member((_,Val,ValN), Env); (number(_,[Val],[]), ValN = Val)),
+    % ValN = Val,
+
+    update(num, Id, ValN, Env, NewEnv),
     Ret = Id.
 
 program_eval_h(assgn_bool(X,Y), Env, NewEnv, Ret) :-
     program_eval_h(X, Env, _, Id),
     program_eval_h(Y, Env, _, Val),
+
+    % (member((_,Val,ValN), Env); (boolean_expr(_,[Val],[]), ValN = Val)),
+    ValN = Val,
+
     update(bool, Id, Val, Env, NewEnv),
+    Ret = Id.
+
+program_eval_h(assgn_str(X,Y), Env, NewEnv, Ret) :-
+    program_eval_h(X, Env, _, Id),
+    program_eval_h(Y, Env, _, Val),
+
+    (member((_,Val,ValN), Env); (string(Val), ValN = Val)),
+
+    update(bool, Id, ValN, Env, NewEnv),
     Ret = Id.
 
 program_eval_h(assgn_num(X,Y,Z), Env, NewEnv, Ret) :-
@@ -114,7 +132,12 @@ program_eval_h(assgn_bool(X,Y,Z), Env, NewEnv, Ret) :-
     program_eval_h(assgn_bool(X,Y), Env, NewEnv1, _),
     program_eval_h(Z, NewEnv1, NewEnv, _),
     Ret = Id.
- 
+
+program_eval_h(assgn_str(X,Y,Z), Env, NewEnv, Ret) :-
+    program_eval_h(assgn_str(X,Y), Env, NewEnv1, _),
+    program_eval_h(Z, NewEnv1, NewEnv, _),
+    Ret = Id.
+
 % control commands
 
 program_eval_h(if(X,Y,Z), Env, NewEnv, Ret) :-
@@ -160,9 +183,9 @@ program_eval_h(for_range(W,X,Y,Z), Env, NewEnv, Ret) :-
 
 program_eval_h(print(X), Env, NewEnv, Ret) :-
     program_eval_h(X, Env, _, Val),
-    (member((_,Val,ValN), Env); (number(_,[Val],[]), ValN = Val)),
-
-    write(ValN), nl.
+    (member((_,Val,ValN), Env); (number(_,[Val],[]), ValN = Val); (string(Val), ValN = Val)),
+    write(ValN), nl,
+    NewEnv = Env.
 
 % recursive commands
     
@@ -180,7 +203,7 @@ program_eval_h(while(X,Y,Z), Env, NewEnv, Ret) :-
 
 program_eval_h(for(V,W,X,Y,Z), Env, NewEnv, Ret) :-
     program_eval_h(V, Env, NewEnv1, _),
-    program_eval_h(while_and(X,Y,Z), NewEnv1, NewEnv2, _),
+    program_eval_h(while_and(W,X,Y), NewEnv1, NewEnv2, _),
     remove(Id, NewEnv2, NewEnv3),
 
     program_eval_h(Z, NewEnv3, NewEnv, _).
@@ -188,6 +211,10 @@ program_eval_h(for(V,W,X,Y,Z), Env, NewEnv, Ret) :-
 program_eval_h(for_range(V,W,X,Y,Z), Env, NewEnv, Ret) :-
     program_eval_h(for_range(V,W,X,Y), Env, NewEnv1, _),
     program_eval_h(Z, NewEnv1, NewEnv, _).
+
+program_eval_h(print(X,Y), Env, NewEnv, Ret) :-
+    program_eval_h(print(X), Env, _, Val),
+    program_eval_h(Y, Env, NewEnv, _).
 
 % boolean expressions
 
@@ -221,10 +248,10 @@ program_eval_h(not(X), Env, NewEnv, Ret) :-
 
 program_eval_h(eq(X,Y), Env, NewEnv, Ret) :-
     program_eval_h(X, Env, _, Val1),
-    (member((_,Val1,Val1N), Env); (number(_,[Val1],[]), Val1N = Val1)),
+    ((member((_,Val1,Val1N), Env)); (number(_,[Val1],[]), Val1N = Val1); (string(Val1), Val1N = Val1)),
 
     program_eval_h(Y, NewEnv1, NewEnv2, Val2),
-    (member((_,Val2,Val2N), Env); (number(_,[Val2],[]), Val2N = Val2)),
+    (member((_,Val2,Val2N), Env); (number(_,[Val2],[]), Val2N = Val2); (string(Val1), Val1N = Val1)),
 
     ((Val1N == Val2N, Ret = true);
     (Val1N =\= Val2N, Ret = false)),
@@ -301,4 +328,8 @@ program_eval_h(id(X), Env, NewEnv, Ret) :-
 
 program_eval_h(num(X), Env, NewEnv, Ret) :-
     Ret = X,
+    NewEnv = Env.
+
+program_eval_h(str(X), Env, NewEnv, Ret) :-
+    atom_string(X, Ret),
     NewEnv = Env.
