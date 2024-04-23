@@ -1,55 +1,56 @@
-token(begin) --> ['b', 'e', 'g', 'i', 'n'].
-token(end) --> ['e', 'n', 'd'].
-token(if) --> ['i', 'f'].
-token(then) --> ['t', 'h', 'e', 'n'].
-token(else) --> ['e', 'l', 's', 'e'].
-token(endif) --> ['e', 'n', 'd', 'i', 'f'].
-token(assign) --> [':', '='].
-token(semicolon) --> [';'].
-token(plus) --> ['+'].
-token(minus) --> ['-'].
-token(multiply) --> ['*'].
-token(divide) --> ['/'].
-token(lparen) --> ['('].
-token(rparen) --> [')'].
-token(comma) --> [','].
-token(question) --> ['?'].
-token(colon) --> [':'].
-token(print) --> ['p', 'r', 'i', 'n', 't'].
-token(true) --> ['t', 'r', 'u', 'e'].
-token(false) --> ['f', 'a', 'l', 's', 'e'].
-token(in) --> ['i', 'n'].
-token(range) --> ['r', 'a', 'n', 'g', 'e'].
+% Tokenize the input into a list of tokens
+lexer(Input, Tokens) :-
+    string_chars(Input, Chars),
+    tokenize(Chars, Tokens).
 
-token(string(S)) --> ['"'], string_chars(C), ['"'], { atom_chars(S, C) }.
-string_chars([H|T]) --> string_char(H), string_chars(T).
-string_chars([]) --> [].
-string_char(C) --> [C], { C \= '"' }.
+% Main tokenizing logic
+tokenize([], []).
+tokenize([H|T], Tokens) :-
+    % Skip whitespace
+    char_type(H, space), 
+    tokenize(T, Tokens).
+tokenize(['"'|T], [String|RestTokens]) :-
+    % Handle strings
+    consume_string(T, Chars, RestT),
+    atom_chars(String, ['"'|Chars]),
+    tokenize(RestT, RestTokens).
+tokenize([H|T], [Number|RestTokens]) :-
+    % Handle numbers
+    char_type(H, digit),
+    consume_number(T, Digits, RestT),
+    atom_number(Number, [H|Digits]),
+    tokenize(RestT, RestTokens).
+tokenize([H|T], [H|RestTokens]) :-
+    % Handle single character tokens (operators and punctuation)
+    member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ',']),
+    tokenize(T, RestTokens).
+tokenize([H|T], [Token|RestTokens]) :-
+    % Handle identifiers and keywords
+    \+ char_type(H, space),
+    \+ member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ',']),
+    consume_identifier(T, IdChars, RestT),
+    atom_chars(Token, [H|IdChars]),
+    tokenize(RestT, RestTokens).
 
-token(number(N)) --> digits(D), { number_chars(N, D) }.
-digits([D|T]) --> digit(D), digits(T).
-digits([D]) --> digit(D).
-digit(D) --> [D], { char_type(D, digit) }.
+% Helper to consume a string until the closing quote
+consume_string([], [], []).
+consume_string(['"'|T], ['"'|[]], T).
+consume_string([H|T], [H|RestChars], RestT) :-
+    consume_string(T, RestChars, RestT).
 
-token(identifier(Id)) --> identifier_chars(Chars), { atom_chars(Id, Chars) }.
-identifier_chars([C|Cs]) --> identifier_char(C), identifier_chars(Cs).
-identifier_chars([C]) --> identifier_char(C).
-identifier_char(C) --> [C], { char_type(C, alpha) ; char_type(C, lower) }.
+% Helper to consume a number until a non-digit
+consume_number([], [], []).
+consume_number([H|T], [], [H|T]) :-
+    \+ char_type(H, digit).
+consume_number([H|T], [H|RestDigits], RestT) :-
+    char_type(H, digit),
+    consume_number(T, RestDigits, RestT).
 
-whitespace --> [C], { char_type(C, white) }, whitespace.
-whitespace --> [].
-
-% Comments (skip anything after % to the end of the line)
-comment --> ['%'], comment_chars, comment.
-comment --> [].
-comment_chars --> [C], { C \= '\n' }, comment_chars.
-comment_chars --> ['\n'].
-
-% The main lexer function
-lexer(Tokens) --> whitespace, ( comment ; token(Token) ), !, { Tokens = [Token | TokenList] }, lexer(TokenList).
-lexer([]) --> [].
-
-% string reader test
-read_string(String, Tokens) :-
-    string_chars(String, Chars),
-    phrase(lexer(Tokens), Chars).
+% Helper to consume an identifier until a special character or whitespace
+consume_identifier([], [], []).
+consume_identifier([H|T], [], [H|T]) :-
+    member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ',', ' ']) ; char_type(H, space).
+consume_identifier([H|T], [H|RestIdChars], RestT) :-
+    \+ member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ',', ' ']),
+    \+ char_type(H, space),
+    consume_identifier(T, RestIdChars, RestT).
