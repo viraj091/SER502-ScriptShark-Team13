@@ -1,78 +1,74 @@
 % Entry point for the lexer
-lexer(Input, Tokens) :-
+lexer(Input) :-
     string_chars(Input, Chars),
-    tokenize(Chars, [], Tokens).
+    tokenize(Chars, [], TokensRev),
+    reverse(TokensRev, Tokens),
+    print_tokens(Tokens).
 
 % Tokenize the character list into tokens
-tokenize([], TokenAcc, Tokens) :-
-    reverse(TokenAcc, Tokens).  % Reverse the accumulated tokens for correct order
+tokenize([], Tokens, Tokens).
 tokenize([H|T], TokenAcc, Tokens) :-
-    (   char_type(H, space)    % Skip whitespace
-    ->  tokenize(T, TokenAcc, Tokens)
-    ;   handle_token([H|T], NewT, Token, TokenAcc),
-        tokenize(NewT, [Token|TokenAcc], Tokens)
+    (   char_type(H, space)
+    ->  tokenize(T, TokenAcc, Tokens)  % Skip spaces
+    ;   handle_token([H|T], NewT, Token)
+    ->  tokenize(NewT, [Token|TokenAcc], Tokens)  % Add new Token to the end of list correctly
+    ;   tokenize(T, TokenAcc, Tokens)  % Skip character if no token can be formed
     ).
 
-% Dispatch to specific token handlers
-handle_token(Chars, RestChars, Token, TokenAcc) :-
-    (   Chars = ['"'|_]  % String token
-    ->  consume_string(Chars, RestChars, Token)
-    ;   Chars = [H|_], char_type(H, digit)  % Numeric token
-    ->  consume_number(Chars, RestChars, Token)
-    ;   Chars = [H|_], member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ','])  % Operators and punctuation
-    ->  Token = H, RestChars = T
-    ;   consume_identifier(Chars, RestChars, Token)
-    ).
+% Handle different types of tokens
+handle_token(Input, RestT, Token) :-
+    multi_char_operator_or_keyword(Input, RestT, Token), !;
+    single_char_operator(Input, RestT, Token), !;
+    consume_number(Input, RestT, Token), !;
+    consume_identifier_or_keyword(Input, RestT, Token).
 
-% Consume characters until the closing quote for strings
-consume_string(['"'|T], RestChars, String) :-
-    consume_until_quote(T, Chars, RestChars),
-    atom_chars(String, ['"'|Chars]).
+% Multi-character operators and keywords
+multi_char_operator_or_keyword([':', '='|T], T, ':=').
+multi_char_operator_or_keyword(['n', 'o', 't'|T], RestT, 'not') :- peek_non_alpha(T, RestT).
 
-% Helper to consume until a closing quote, handling escaped quotes
-consume_until_quote([], [], []).
-consume_until_quote(['"'|T], ['"'|[]], T).
-consume_until_quote([H|T], [H|RestChars], RestT) :-
-    consume_until_quote(T, RestChars, RestT).
+% Single character operators and punctuation
+single_char_operator([H|T], T, Token) :-
+    member(H, ['+', '-', '*', '/', '=', ':', '?', ';', ',', '.']),
+    atom_chars(Token, [H]).
+single_char_operator(['('|T], T, '\'(\'').
+single_char_operator([')'|T], T, '\')\'').
 
-% Consume a sequence of digits for a number
-consume_number([H|T], RestChars, Number) :-
+% Check for non-alphanumeric characters after a token
+peek_non_alpha([H|T], [H|T]) :-
+    (char_type(H, space); char_type(H, punct)).
+
+% Consume a numeric token
+consume_number([H|T], RestT, Number) :-
     char_type(H, digit),
-    consume_digits(T, Digits, RestChars),
-    atom_number(Number, [H|Digits]).
+    consume_digits([H|T], Digits, RestT),
+    atom_chars(AtomDigits, Digits),
+    atom_number(AtomDigits, Number).
 
-% Helper to consume digits
-consume_digits([], [], []).
-consume_digits([H|T], [], [H|T]) :- \+ char_type(H, digit).
+% Consume identifiers or keywords
+consume_identifier_or_keyword([H|T], RestT, Identifier) :-
+    valid_identifier_start(H),
+    consume_identifier_chars([H|T], IdChars, RestT),
+    atom_chars(Identifier, IdChars).
+
+% Helper predicates for digits and identifiers
 consume_digits([H|T], [H|RestDigits], RestT) :-
     char_type(H, digit),
     consume_digits(T, RestDigits, RestT).
+consume_digits(T, [], T).
 
-% Consume an identifier
-consume_identifier([H|T], RestChars, Identifier) :-
-    valid_identifier_start(H),
-    consume_id_chars(T, IdChars, RestChars),
-    atom_chars(Identifier, [H|IdChars]).
-
-% Helper to consume identifier characters
-consume_id_chars([], [], []).
-consume_id_chars([H|T], [], [H|T]) :-
-    invalid_identifier_char(H).
-consume_id_chars([H|T], [H|RestIdChars], RestT) :-
+consume_identifier_chars([H|T], [H|RestIdChars], RestT) :-
     valid_identifier_char(H),
-    consume_id_chars(T, RestIdChars, RestT).
+    consume_identifier_chars(T, RestIdChars, RestT).
+consume_identifier_chars(T, [], T).
 
-% Define valid start characters for an identifier
 valid_identifier_start(H) :-
     \+ char_type(H, space),
-    \+ member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ',']).
+    \+ member(H, ['+', '-', '*', '/', '=', ':', '?', ';', ',', '.', '"']).
 
-% Define valid characters for an identifier
 valid_identifier_char(H) :-
-    \+ char_type(H, space),
-    \+ member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ',']).
+    char_type(H, alnum); H == '_'.
 
-% Define invalid characters for an identifier
-invalid_identifier_char(H) :-
-    char_type(H, space) ;
-    member(H, ['+', '-', '*', '/', '=', '(', ')', ':', '?', ';', ',', '"']).
+% Print the tokens in a readable format
+print_tokens(Tokens) :-
+    write('Tokens: '), write(Tokens), nl.
+
