@@ -1,120 +1,75 @@
-% Lexical Analyzer
-lexer(Input, TokenList) :-
-    split_string(Input, " \n\t", " \n\t", Tokens),
-    remove_empty_strings(Tokens, TokenList).
+:- use_module(library(pcre)).
 
-remove_empty_strings([], []).
-remove_empty_strings([Token|Tokens], FilteredTokens) :-
-    Token \= "",
-    !,
-    FilteredTokens = [Token|Rest],
-    remove_empty_strings(Tokens, Rest).
-remove_empty_strings([_|Tokens], FilteredTokens) :-
-    remove_empty_strings(Tokens, FilteredTokens).
+:- table boolean_expr/3.
+:- table arithmetic_expr/3.
+:- table term/3.
 
-% Parser
-parse(Input) :-
-    catch(
-        (
-            lexer(Input, Tokens),
-            writeln('Tokens:'),
-            writeln(Tokens),  % Print the tokens
-            program(Tokens, []),
-            writeln('Parsing successful.')
-        ),
-        Error,
-        (
-            writeln('Error during parsing:'),
-            writeln(Error)
-        )
-    ).
+program(prog(X)) --> block(X), [.].
+block(block(X)) --> [begin], command(X), [end].
 
-% Program
-program --> statement, program.
-program --> [].
+command(assgn_num(X,Y)) --> identifier(X), [:=], arithmetic_expr(Y).
+command(assgn_bool(X,Y)) --> identifier(X), [:=], boolean_expr(Y).
+command(assgn_str(X,Y)) --> identifier(X), [:=], string_expr(Y).
 
-% Statement
-statement --> assignment.
-statement --> conditional.
-statement --> loop.
-statement --> print.
+command(if(X,Y,Z)) --> [if], boolean_expr(X), [then], command(Y), [else], command(Z), [endif].
+command(tern(X,Y,Z)) --> boolean_expr(X), [?], command(Y), [:], command(Z), [endtern].
 
-% Assignment
-assignment --> identifier, [':='], expression.
+command(while(X,Y)) --> [while], boolean_expr(X), [do], command(Y), [endwhile].
+command(for(W,X,Y,Z)) --> [for], command(W), [;], boolean_expr(X), [;], command(Y), [do], command(Z), [endfor].
+command(for_range(W,X,Y,Z)) --> [for], identifier(W), [in], [range], ['('], arithmetic_expr(X), [','], arithmetic_expr(Y), [')'], [do], command(Z), [endfor].
 
-% Conditional
-conditional --> ['if'], expression, ['then'], statement, ['else'], statement.
-conditional --> expression, ['?'], expression, [':'], expression.
+command(print(X)) --> [print], ['('], identifier(X), [')'].
+command(print(X)) --> [print], ['('], number(X), [')'].
+command(print(X)) --> [print], ['('], string(X), [')'].
 
-% Loop
-loop --> for_loop.
-loop --> while_loop.
+% recursive commands
 
-% For Loop
-for_loop --> ['for'], identifier, [':='], expression, [';'],
-            ['not'], identifier, ['='], expression, [';'],
-            identifier, [':='], identifier, ['+'], expression, ['do'],
-            identifier, [':='], identifier, ['*'], expression,
-            ['endfor'].
+command(assgn_num(X,Y,Z)) --> identifier(X), [:=], arithmetic_expr(Y), [;], command(Z).
+command(assgn_bool(X,Y,Z)) --> identifier(X), [:=], boolean_expr(Y), [;], command(Z).
+command(assgn_str(X,Y,Z)) --> identifier(X), [:=], string_expr(Y), [;], command(Z).
 
-% While Loop
-while_loop --> ['while'], ['('], expression, [')'], statement.
+command(if(W,X,Y,Z)) --> [if], boolean_expr(W), [then], command(X), [else], command(Y), [endif], [;], command(Z).
+command(tern(W,X,Y,Z)) --> boolean_expr(W), [?], command(X), [:], command(Y), [endtern], [;], command(Z).
 
-% Print
-print --> ['print'], ['('], identifier, [')'], ['end'], ['.'].
+command(while(X,Y,Z)) --> [while], boolean_expr(X), [do], command(Y), [endwhile], [;], command(Z).
+command(for(V,W,X,Y,Z)) --> [for], command(V), [;], boolean_expr(W), [;], command(X), [do], command(Y), [endfor], [;], command(Z).
+command(for_range(V,W,X,Y,Z)) --> [for], identifier(V), [in], [range], arithmetic_expr(W), [','], arithmetic_expr(X), [do], command(Y), [endfor], [;], command(Z).
 
-% Expression
-expression --> term.
-expression --> term, operator, expression.
+command(print(X,Y)) --> [print], ['('], identifier(X), [')'], [;], command(Y).
+command(print(X,Y)) --> [print], ['('], number(X), [')'], [;], command(Y).
+command(print(X,Y)) --> [print], ['('], string(X), [')'], [;], command(Y).
 
-% Term
-term --> identifier.
-term --> value.
+% boolean expressions
 
-% Value
-value --> boolean(true).
-value --> boolean(false).
-value --> number.
-value --> string.
+boolean_expr(bool_expr(true)) --> [true].
+boolean_expr(bool_expr(false)) --> [false].
+boolean_expr(bool_expr(X)) --> identifier(X).
 
-% Boolean
-boolean(true) --> ['true'].
-boolean(false) --> ['false'].
+boolean_expr(and_expr(X,Y)) --> boolean_expr(X), [and], boolean_expr(Y).
+boolean_expr(or_expr(X,Y)) --> boolean_expr(X), [or], boolean_expr(Y).
+boolean_expr(not(X)) --> [not], boolean_expr(X).
 
-% Number
-number --> [Num], { atom_number(Num, NumAsNumber), integer(NumAsNumber) }.
+boolean_expr(eq(X,Y)) --> arithmetic_expr(X), [=], arithmetic_expr(Y).
+boolean_expr(eq(X,Y)) --> boolean_expr(X), [=], boolean_expr(Y).
+boolean_expr(eq(X,Y)) --> string_expr(X), [=], string_expr(Y).
 
-% String
-string --> ['"'], string_chars, ['"'].
+% arithmetic expressions
 
-% String Characters
-string_chars --> [].
-string_chars --> [Char], { \+ Char = '"', \+ Char = '\n', \+ Char = '\t', \+ Char = ' ', char_type(Char, ascii) }, string_chars.
+arithmetic_expr(term(X)) --> term(X).
+arithmetic_expr(add_expr(X,Y)) --> arithmetic_expr(X), [+], term(Y).
+arithmetic_expr(sub_expr(X,Y)) --> arithmetic_expr(X), [-], term(Y).
 
-% Identifier
-identifier --> [Id], { atom(Id) }.
+term(factor_term(X)) --> factor(X).
+term(div_term(X,Y)) --> term(X), [/], factor(Y).
+term(mult_term(X,Y)) --> term(X), [*], factor(Y).
 
-% Operator
-operator --> ['+'].
-operator --> ['-'].
-operator --> ['*'].
-operator --> ['/'].
-operator --> ['and'].
-operator --> ['or'].
-operator --> ['not'].
+factor(factor(X)) --> identifier(X); number(X); ['('], arithmetic_expr(X), [')'].
 
-% Command-line Invocation
-:- initialization(main).
-main :-
-    writeln('Please enter a string:'),
-    read_line_to_string(user_input, Input),
-    catch(
-        (
-            parse(Input)
-        ),
-        Error,
-        (
-            writeln('Error during execution:'),
-            writeln(Error)
-        )
-    ).
+% identifiers, strings, numbers
+
+identifier(id(X)) --> [X], {atom_string(X, X_str), re_match("[a-z]+"/i, X_str)}.
+
+string_expr(str_expr(X)) --> string(X); identifier(X).
+string(str(X)) --> ['"'], [X], ['"'].
+
+number(num(X)) --> [X], {number(X)}.
