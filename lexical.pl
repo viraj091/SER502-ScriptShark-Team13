@@ -1,4 +1,3 @@
-% Entry point for the lexer
 lexer(Input) :-
     string_chars(Input, Chars),
     tokenize(Chars, [], TokensRev),
@@ -20,6 +19,7 @@ handle_token(Input, RestT, Token) :-
     multi_char_operator_or_keyword(Input, RestT, Token), !;
     single_char_operator(Input, RestT, Token), !;
     consume_number(Input, RestT, Token), !;
+    consume_string(Input, RestT, Token), !;
     consume_identifier_or_keyword(Input, RestT, Token).
 
 % Multi-character operators and keywords
@@ -33,16 +33,24 @@ single_char_operator([H|T], T, Token) :-
 single_char_operator(['('|T], T, '\'(\'').
 single_char_operator([')'|T], T, '\')\'').
 
-% Check for non-alphanumeric characters after a token
-peek_non_alpha([H|T], [H|T]) :-
-    (char_type(H, space); char_type(H, punct)).
-
 % Consume a numeric token
 consume_number([H|T], RestT, Number) :-
     char_type(H, digit),
     consume_digits([H|T], Digits, RestT),
     atom_chars(AtomDigits, Digits),
     atom_number(AtomDigits, Number).
+
+% Consume string literals including quotes
+consume_string(['"'|T], RestT, Token) :-
+    consume_string_chars(T, Chars, RestT),
+    atom_concat('\"', Chars, Quoted),
+    atom_concat(Quoted, '\"', Token).
+
+% Helper to consume characters until the closing quote
+consume_string_chars(['"'|T], '', T).  % End of string
+consume_string_chars([H|T], Chars, RestT) :-
+    consume_string_chars(T, TailChars, RestT),
+    atom_concat(H, TailChars, Chars).
 
 % Consume identifiers or keywords
 consume_identifier_or_keyword([H|T], RestT, Identifier) :-
