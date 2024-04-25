@@ -1,4 +1,4 @@
-lexer(Input) :-
+lexer(Input, Tokens) :-
     string_chars(Input, Chars),
     tokenize(Chars, [], TokensRev),
     reverse(TokensRev, Tokens),
@@ -19,8 +19,10 @@ handle_token(Input, RestT, Token) :-
     multi_char_operator_or_keyword(Input, RestT, Token), !;
     single_char_operator(Input, RestT, Token), !;
     consume_number(Input, RestT, Token), !;
-    consume_string(Input, RestT, Token), !;
-    consume_identifier_or_keyword(Input, RestT, Token).
+    (   Input = ['"'|_]  % Start of string literal
+    ->  consume_string(Input, RestT, Token)
+    ;   consume_identifier_or_keyword(Input, RestT, Token)
+    ).
 
 % Multi-character operators and keywords
 multi_char_operator_or_keyword([':', '='|T], T, ':=').
@@ -33,6 +35,10 @@ single_char_operator([H|T], T, Token) :-
 single_char_operator(['('|T], T, '\'(\'').
 single_char_operator([')'|T], T, '\')\'').
 
+% Check for non-alphanumeric characters after a token
+peek_non_alpha([H|T], [H|T]) :-
+    (char_type(H, space); char_type(H, punct)).
+
 % Consume a numeric token
 consume_number([H|T], RestT, Number) :-
     char_type(H, digit),
@@ -43,8 +49,10 @@ consume_number([H|T], RestT, Number) :-
 % Consume string literals including quotes
 consume_string(['"'|T], RestT, Token) :-
     consume_string_chars(T, Chars, RestT),
-    atom_concat('\"', Chars, Quoted),
-    atom_concat(Quoted, '\"', Token).
+    atom_concat('\"', Chars, TempToken),
+    atom_concat(TempToken, '\"', Quoted),
+    atom_concat('\'', Quoted, TempToken2),
+    atom_concat(TempToken2, '\'', Token).
 
 % Helper to consume characters until the closing quote
 consume_string_chars(['"'|T], '', T).  % End of string
@@ -77,6 +85,9 @@ valid_identifier_char(H) :-
     char_type(H, alnum); H == '_'.
 
 % Print the tokens in a readable format
+print_tokens(Tokens) :-
+    write('Tokens: '), write(Tokens), nl.
+
 print_tokens(Tokens) :-
     write('Tokens: '), write(Tokens), nl.
 
