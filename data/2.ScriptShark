@@ -1,0 +1,1 @@
+begin i := 2; z := 9; while not i = 0 do z := z / 3; i := i - 1; endwhile; print(z) end.
