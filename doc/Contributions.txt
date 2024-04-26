@@ -2,8 +2,8 @@ Boan:
 * Milestone 1
    * Language Design
 * Milestone 2
-   * Lexical Analyzer (to be completed)
-   * Runtime Compiler (to be completed)
+   * Lexical Analyzer
+   * Documentation (Lexical Analyzer)
 
 
 Angela:
@@ -12,8 +12,10 @@ Angela:
 * Milestone 2
    * Parser
    * Interpreter
+   * Runtime
    * Sample programs
-   * Documentation (Grammar, Parser, Interpreter)
+   * Documentation (Grammar, Parser, Interpreter, Installation & Runtime)
+   * README.md
 
 
 Avanthika: 
@@ -21,13 +23,10 @@ Avanthika:
    * Language Name
    * GitHub setup
 * Milestone 2
-   * Lexical Analyzer (to be completed)
-   * Runtime Compiler (to be completed)
+
 
 Viraj:
 * Milestone 1
    * Language Grammar
    * GitHub setup
 * Milestone 2
-   * Lexical Analyzer (to be completed)
-   * Runtime Compiler (to be completed)
