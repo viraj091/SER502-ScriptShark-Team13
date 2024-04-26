@@ -19,7 +19,7 @@ handle_token(Input, RestT, Token) :-
     multi_char_operator_or_keyword(Input, RestT, Token), !;
     single_char_operator(Input, RestT, Token), !;
     consume_number(Input, RestT, Token), !;
-    (   Input = ['"'|_]  % Start of string literal
+    (   Input = ['"'|_]
     ->  consume_string(Input, RestT, Token)
     ;   consume_identifier_or_keyword(Input, RestT, Token)
     ).
@@ -46,13 +46,9 @@ consume_number([H|T], RestT, Number) :-
     atom_chars(AtomDigits, Digits),
     atom_number(AtomDigits, Number).
 
-% Consume string literals including quotes
-consume_string(['"'|T], RestT, Token) :-
-    consume_string_chars(T, Chars, RestT),
-    atom_concat('\"', Chars, TempToken),
-    atom_concat(TempToken, '\"', Quoted),
-    atom_concat('\'', Quoted, TempToken2),
-    atom_concat(TempToken2, '\'', Token).
+% Consume string literals and separate the quotes as distinct tokens
+consume_string(['"'|T], RestT, ['\'"\'', String, '\'"\'']) :-
+    consume_string_chars(T, String, RestT).
 
 % Helper to consume characters until the closing quote
 consume_string_chars(['"'|T], '', T).  % End of string
@@ -85,9 +81,6 @@ valid_identifier_char(H) :-
     char_type(H, alnum); H == '_'.
 
 % Print the tokens in a readable format
-print_tokens(Tokens) :-
-    write('Tokens: '), write(Tokens), nl.
-
 print_tokens(Tokens) :-
     write('Tokens: '), write(Tokens), nl.
 
