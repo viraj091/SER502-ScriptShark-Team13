@@ -79,8 +79,39 @@ valid_identifier_start(H) :-
 
 valid_identifier_char(H) :-
     char_type(H, alnum); H == '_'.
-
 % Print the tokens in a readable format
 print_tokens(Tokens) :-
-    write('Tokens: '), write(Tokens), nl.
+    write('Tokens: ['),
+    print_tokens_formatted(Tokens),
+    write(']'),
+    nl.
 
+% Helper predicate to print tokens in a formatted way
+print_tokens_formatted([]).
+print_tokens_formatted([Token|Rest]) :-
+    (   is_list(Token)
+    ->  print_string_token(Token)
+    ;   write(Token)
+    ),
+    write(', '),
+    print_tokens_formatted(Rest).
+
+% Helper predicate to print string tokens without inner brackets
+print_string_token([]).
+print_string_token(['"'|Rest]) :-
+    write('"'),
+    print_string_contents(Rest),
+    write('", ').
+print_string_token([Token|Rest]) :-
+    write(Token),
+    write(', '),
+    print_string_token(Rest).
+
+% Helper predicate to print the contents of a string token
+print_string_contents([]) :- write('"').
+print_string_contents(['"'|Rest]) :-
+    write('"'),
+    print_string_contents(Rest).
+print_string_contents([Char|Rest]) :-
+    write(Char),
+    print_string_contents(Rest).
