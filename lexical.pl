@@ -19,7 +19,7 @@ handle_token(Input, RestT, Token) :-
     multi_char_operator_or_keyword(Input, RestT, Token), !;
     single_char_operator(Input, RestT, Token), !;
     consume_number(Input, RestT, Token), !;
-    (   Input = ['"'|_]
+    (   Input = ['"'|_]  % Start of string literal
     ->  consume_string(Input, RestT, Token)
     ;   consume_identifier_or_keyword(Input, RestT, Token)
     ).
@@ -34,6 +34,9 @@ single_char_operator([H|T], T, Token) :-
     atom_chars(Token, [H]).
 single_char_operator(['('|T], T, '\'(\'').
 single_char_operator([')'|T], T, '\')\'').
+single_char_operator(['"'|T], T, '\'"\'').
+single_char_operator(['"'|T], T, '\'"\'').
+
 
 % Check for non-alphanumeric characters after a token
 peek_non_alpha([H|T], [H|T]) :-
@@ -46,9 +49,13 @@ consume_number([H|T], RestT, Number) :-
     atom_chars(AtomDigits, Digits),
     atom_number(AtomDigits, Number).
 
-% Consume string literals and separate the quotes as distinct tokens
-consume_string(['"'|T], RestT, ['\'"\'', String, '\'"\'']) :-
-    consume_string_chars(T, String, RestT).
+% Consume string literals including quotes
+consume_string(['"'|T], RestT, Token) :-
+    consume_string_chars(T, Chars, RestT),
+    atom_concat('\"', Chars, TempToken),
+    atom_concat(TempToken, '\"', Quoted),
+    atom_concat('\'', Quoted, TempToken2),
+    atom_concat(TempToken2, '\'', Token).
 
 % Helper to consume characters until the closing quote
 consume_string_chars(['"'|T], '', T).  % End of string
@@ -79,39 +86,8 @@ valid_identifier_start(H) :-
 
 valid_identifier_char(H) :-
     char_type(H, alnum); H == '_'.
+
 % Print the tokens in a readable format
 print_tokens(Tokens) :-
-    write('Tokens: ['),
-    print_tokens_formatted(Tokens),
-    write(']'),
-    nl.
+    write('Tokens: '), write(Tokens), nl.
 
-% Helper predicate to print tokens in a formatted way
-print_tokens_formatted([]).
-print_tokens_formatted([Token|Rest]) :-
-    (   is_list(Token)
-    ->  print_string_token(Token)
-    ;   write(Token)
-    ),
-    write(', '),
-    print_tokens_formatted(Rest).
-
-% Helper predicate to print string tokens without inner brackets
-print_string_token([]).
-print_string_token(['"'|Rest]) :-
-    write('"'),
-    print_string_contents(Rest),
-    write('", ').
-print_string_token([Token|Rest]) :-
-    write(Token),
-    write(', '),
-    print_string_token(Rest).
-
-% Helper predicate to print the contents of a string token
-print_string_contents([]) :- write('"').
-print_string_contents(['"'|Rest]) :-
-    write('"'),
-    print_string_contents(Rest).
-print_string_contents([Char|Rest]) :-
-    write(Char),
-    print_string_contents(Rest).
