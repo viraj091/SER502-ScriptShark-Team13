@@ -23,6 +23,7 @@ Avanthika:
    * Language Name
    * GitHub setup
 * Milestone 2
+  * Lexical Analyzer and Parser Draft(which produced Tokens)  
 
 
 Viraj:
@@ -30,3 +31,4 @@ Viraj:
    * Language Grammar
    * GitHub setup
 * Milestone 2
+  * Lexical Analyzer and Parser Draft (which produced Tokens)
